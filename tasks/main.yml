@@ -1,3 +1,8 @@
 ---
-- include: install.yml
-- include: cleanup.yml
+- name: Include for centos 7
+  include: install_centos_7.yml
+  when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '7'
+
+- name: Include for centos 6
+  include: install_centos_6.yml
+  when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '6'

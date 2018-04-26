@@ -1,0 +1,66 @@
+---
+
+# This will be use to place install file.
+- name: Create install directory
+  file:
+    path: "{{ awslogs_install_dir }}"
+    state: directory    
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Copy config file in place
+  copy:
+    src: awslogs.conf
+    dest: "{{ awslogs_install_dir }}/awslogs.conf"
+    group: root
+    mode: 0600
+    owner: root
+  register: config_file
+
+- name: Download the installer
+  get_url:
+    dest: "{{ awslogs_install_dir }}/awslogs-agent-setup.py"
+    group: root
+    owner: root
+    mode: 0600
+    url: "{{ awslogs_install_url }}"
+  register: install_script
+
+- name: Check if aws log is already running
+  shell: ps aux | grep "[a]ws logs push"
+  register: aws_logs_process
+  changed_when: False
+  ignore_errors: yes
+
+- name: Run the install script provided by AWS. 
+  shell: python "{{ awslogs_install_dir }}/awslogs-agent-setup.py" -n -r "{{ aws_region }}" -c "{{ awslogs_install_dir }}/awslogs.conf" 
+  when: aws_logs_process.rc != 0 or config_file.changed or install_script.changed
+
+- name: Copy systemd unit file
+  copy:
+    src: awslogs.service
+    dest: /lib/systemd/system/awslogs.service
+    owner: root
+    group: root
+    mode: 644
+  register: systemd_file
+
+- name: Refresh systemctl service
+  shell: "systemctl daemon-reload"
+  when : systemd_file.changed
+
+- name: Start awslogs service
+  service:
+    name: awslogs
+    state: started
+
+# service module does not enable when systemd and init are installed.
+# Need the "use:" directive as workaround
+# https://github.com/ansible/ansible-modules-core/issues/3764
+#
+- name: Enable awslogs service
+  service:
+    name: awslogs
+    enabled: yes
+    use: service 
