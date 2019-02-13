@@ -1,14 +1,25 @@
 [Unit]
-Description=The CloudWatch Logs agent
-After=rc-local.service
+Documentation=man:systemd-sysv-generator(8)
+SourcePath=/etc/init.d/awslogs
+Description=LSB: Daemon for AWSLogs agent.
+Before=rescue.target
+Before=multi-user.target
+Before=multi-user.target
+Before=multi-user.target
+Before=graphical.target
+Before=poweroff.target
+Before=reboot.target
+Before=shutdown.target
+After=networking.service
+Conflicts=shutdown.target
 
 [Service]
-Type=simple
-Restart=always
+Type=forking
+Restart=no
+TimeoutSec=5min
+IgnoreSIGPIPE=no
 KillMode=process
-TimeoutSec=infinity
-PIDFile=/var/awslogs/state/awslogs.pid
-ExecStart=/var/awslogs/bin/awslogs-agent-launcher.sh --start --background --pidfile $PIDFILE --user awslogs --chuid awslogs &
-
-[Install]
-WantedBy=multi-user.target
+GuessMainPID=no
+RemainAfterExit=yes
+ExecStart=/etc/init.d/awslogs start
+ExecStop=/etc/init.d/awslogs stop
